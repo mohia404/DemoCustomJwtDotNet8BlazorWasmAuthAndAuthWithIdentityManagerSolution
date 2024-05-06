@@ -1,17 +1,18 @@
-﻿using Blazored.LocalStorage;
-using Microsoft.AspNetCore.Components.Authorization;
+﻿using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using SharedClassLibrary.GenericModels;
 using System.Security.Claims;
-namespace BlazorWebAssemblyApp.Authentication
+
+namespace BlazorServerApp.Authentication
 {
-    public class CustomAuthenticationStateProvider(ILocalStorageService localStorageService) : AuthenticationStateProvider
+    public class CustomAuthenticationStateProvider(ProtectedLocalStorage localStorageService) : AuthenticationStateProvider
     {
         private ClaimsPrincipal anonymous = new(new ClaimsIdentity());
         public async override Task<AuthenticationState> GetAuthenticationStateAsync()
         {
             try
             {
-                string? stringToken = await localStorageService.GetItemAsStringAsync("token");
+                var stringToken = (await localStorageService.GetAsync<string>("token")).Value;
 
                 if (string.IsNullOrWhiteSpace(stringToken))
                     return await Task.FromResult(new AuthenticationState(anonymous));
@@ -34,12 +35,12 @@ namespace BlazorWebAssemblyApp.Authentication
             {
                 var userSession = Generics.GetClaimsFromToken(token);
                 claimsPrincipal = Generics.SetClaimPrincipal(userSession);
-                await localStorageService.SetItemAsStringAsync("token", token);
+                await localStorageService.SetAsync("token", token);
             }
             else
             {
                 claimsPrincipal = anonymous;
-                await localStorageService.RemoveItemAsync("token");
+                await localStorageService.DeleteAsync("token");
             }
             NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(claimsPrincipal)));
         }
